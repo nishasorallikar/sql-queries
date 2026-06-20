@@ -1,0 +1,737 @@
+# SQL Fundamentals — Querying Data with SELECT
+
+A simple, visual guide to retrieving and summarizing data in SQL.
+
+---
+
+## Table of Contents
+
+- [Sample Data](#sample-data)
+- [SELECT](#select)
+- [SELECT *](#select-)
+- [SELECT Specific Columns](#select-specific-columns)
+- [DISTINCT](#distinct)
+- [TOP / LIMIT](#top--limit)
+- [WHERE](#where)
+- [Comparison Operators](#comparison-operators)
+- [Aggregate Functions](#aggregate-functions)
+- [GROUP BY](#group-by)
+- [HAVING](#having)
+- [WHERE vs HAVING](#where-vs-having)
+- [ORDER BY](#order-by)
+- [Query Execution Order](#query-execution-order)
+- [Full Worked Example](#full-worked-example)
+- [Common Beginner Mistakes](#common-beginner-mistakes)
+- [Practice Questions](#practice-questions)
+- [Quick Revision Sheet](#quick-revision-sheet)
+
+---
+
+## Sample Data
+
+Every example below uses this one table, `customers`, so you can watch the same data change shape from section to section.
+
+```
+customers
+┌────┬─────────────┬──────────┬───────┐
+│ id │ first_name  │ country  │ score │
+├────┼─────────────┼──────────┼───────┤
+│ 1  │ Maria       │ Germany  │  350  │
+│ 2  │ John        │ USA      │  900  │
+│ 3  │ Georgia     │ UK       │  750  │
+│ 4  │ Ian         │ USA      │   0   │
+│ 5  │ Peter       │ USA      │   0   │
+│ 6  │ Anna        │ UK       │  500  │
+│ 7  │ Sam         │ Germany  │ 1300  │
+└────┴─────────────┴──────────┴───────┘
+```
+
+---
+
+## SELECT
+
+**What it does:** picks which columns you want to see.
+
+```
+   customers table              your result
+┌─────────────────┐          ┌─────────────┐
+│ id  name  score  │   --->   │ first_name  │
+│ ...  ...   ...   │          ├─────────────┤
+└─────────────────┘          │ Maria       │
+                              │ John        │
+                              │ ...         │
+                              └─────────────┘
+```
+
+**Syntax**
+```sql
+SELECT column_name
+FROM table_name;
+```
+
+**Example**
+```sql
+SELECT first_name
+FROM customers;
+```
+
+**Output**
+```
+first_name
+-----------
+Maria
+John
+Georgia
+Ian
+Peter
+Anna
+Sam
+```
+
+> **Note:** `SELECT` only *reads* data — it never changes anything in the table.
+
+---
+
+## SELECT *
+
+`*` means "all columns."
+
+```
+SELECT *  --->  give me EVERY column, EVERY row
+```
+
+**Syntax**
+```sql
+SELECT *
+FROM table_name;
+```
+
+**Example**
+```sql
+SELECT *
+FROM customers;
+```
+
+**Output**
+
+```
+┌────┬─────────────┬──────────┬───────┐
+│ id │ first_name  │ country  │ score │
+├────┼─────────────┼──────────┼───────┤
+│ 1  │ Maria       │ Germany  │  350  │
+│ 2  │ John        │ USA      │  900  │
+│ 3  │ Georgia     │ UK       │  750  │
+│ 4  │ Ian         │ USA      │   0   │
+│ 5  │ Peter       │ USA      │   0   │
+│ 6  │ Anna        │ UK       │  500  │
+│ 7  │ Sam         │ Germany  │ 1300  │
+└────┴─────────────┴──────────┴───────┘
+```
+
+> **Warning:** Good for quickly exploring a table, but avoid `SELECT *` in real reports or apps — it pulls columns you don't need and slows things down.
+
+---
+
+## SELECT Specific Columns
+
+List only the columns you actually want, separated by commas.
+
+```
+   customers                    your result
+┌────┬──────────┐          ┌──────────┬─────────┐
+│ id │  ...      │  --->    │ first_name │ country │
+└────┴──────────┘          ├──────────┼─────────┤
+                            │ Maria      │ Germany │
+                            │ John       │ USA     │
+                            └──────────┴─────────┘
+```
+
+**Example**
+```sql
+SELECT first_name, country
+FROM customers;
+```
+
+**Output**
+
+```
+┌─────────────┬──────────┐
+│ first_name  │ country  │
+├─────────────┼──────────┤
+│ Maria       │ Germany  │
+│ John        │ USA      │
+│ Georgia     │ UK       │
+│ Ian         │ USA      │
+│ Peter       │ USA      │
+│ Anna        │ UK       │
+│ Sam         │ Germany  │
+└─────────────┴──────────┘
+```
+
+---
+
+## DISTINCT
+
+Removes duplicates — keeps only unique values.
+
+```
+Before DISTINCT          After DISTINCT
+┌─────────┐              ┌─────────┐
+│ USA     │              │ USA     │
+│ USA     │     --->     │ India   │
+│ India   │              │ Germany │
+│ Germany │              └─────────┘
+│ India   │
+└─────────┘
+```
+
+**Example**
+```sql
+SELECT DISTINCT country
+FROM customers;
+```
+
+**Output**
+
+```
+┌─────────┐
+│ country │
+├─────────┤
+│ Germany │
+│ USA     │
+│ UK      │
+└─────────┘
+```
+
+> **Note:** With multiple columns, `DISTINCT` removes duplicate *combinations*, not duplicates of each column separately.
+
+---
+
+## TOP / LIMIT
+
+Limits how many rows come back.
+
+> SQL Server uses `TOP`. MySQL/PostgreSQL use `LIMIT`. Same idea, different keyword.
+
+**Example**
+```sql
+SELECT TOP 3 *
+FROM customers;
+```
+
+```
+customers (7 rows)        TOP 3 result
+┌─────┐                   ┌─────┐
+│ row1│ ◄── keep          │ row1│
+│ row2│ ◄── keep          │ row2│
+│ row3│ ◄── keep          │ row3│
+│ row4│
+│ ... │
+└─────┘
+```
+
+> **Warning:** `TOP`/`LIMIT` without `ORDER BY` gives you *some* rows, not the "best" ones. Always sort first:
+> ```sql
+> SELECT TOP 3 * FROM customers ORDER BY score DESC;
+> ```
+
+---
+
+## WHERE
+
+Filters **rows** before anything else happens — only rows matching the condition survive.
+
+```
+customers (7 rows)
+┌────────────────────────┐
+│ Maria  Germany   350    │
+│ John   USA       900    │ ◄── keep (country = USA)
+│ Georgia UK       750    │
+│ Ian    USA       0      │ ◄── keep (country = USA)
+│ Peter  USA       0      │ ◄── keep (country = USA)
+│ Anna   UK        500    │
+│ Sam    Germany  1300    │
+└────────────────────────┘
+        │ WHERE country = 'USA'
+        ▼
+┌────────────────────────┐
+│ John   USA       900    │
+│ Ian    USA       0      │
+│ Peter  USA       0      │
+└────────────────────────┘
+```
+
+**Example**
+```sql
+SELECT *
+FROM customers
+WHERE country = 'USA';
+```
+
+> **Warning:** `WHERE` cannot use aggregate functions like `WHERE COUNT(*) > 5` — that's what `HAVING` is for (see below).
+
+---
+
+## Comparison Operators
+
+Used inside `WHERE` to compare a column to a value.
+
+```
+┌──────────────┬────────────────────────┬──────────────────────────┐
+│  Operator    │  Meaning                │  Example                  │
+├──────────────┼────────────────────────┼──────────────────────────┤
+│  =           │  equal to               │  WHERE country = 'USA'    │
+│  != or <>    │  not equal to           │  WHERE score <> 0         │
+│  >           │  greater than           │  WHERE score > 500        │
+│  <           │  less than              │  WHERE score < 500        │
+│  >=          │  greater or equal       │  WHERE score >= 500       │
+│  <=          │  less or equal          │  WHERE score <= 500       │
+└──────────────┴────────────────────────┴──────────────────────────┘
+```
+
+> **Note:** `column = NULL` never works — `NULL` means "unknown," so use `IS NULL` / `IS NOT NULL` instead.
+
+---
+
+## Aggregate Functions
+
+Aggregate functions take **many rows** and collapse them into **one number**.
+
+```
+   many rows                one value
+┌─────────┐
+│  350    │
+│  900    │
+│  750    │      SUM()      ┌──────┐
+│   0     │   ──────────►   │ 3800 │
+│   0     │                 └──────┘
+│  500    │
+│ 1300    │
+└─────────┘
+```
+
+```
+┌────────────┬─────────────────────────────┐
+│  Function  │  Returns                     │
+├────────────┼─────────────────────────────┤
+│  COUNT()   │  number of rows              │
+│  SUM()     │  total of a numeric column   │
+│  AVG()     │  average value                │
+│  MIN()     │  smallest value               │
+│  MAX()     │  largest value                │
+└────────────┴─────────────────────────────┘
+```
+
+### COUNT()
+```sql
+SELECT COUNT(*) FROM customers;
+```
+```
+7
+```
+
+### SUM()
+```sql
+SELECT SUM(score) FROM customers;
+```
+```
+3800        -- 350+900+750+0+0+500+1300
+```
+
+### AVG()
+```sql
+SELECT AVG(score) FROM customers;
+```
+```
+542.86      -- 3800 ÷ 7
+```
+
+### MIN()
+```sql
+SELECT MIN(score) FROM customers;
+```
+```
+0
+```
+
+### MAX()
+```sql
+SELECT MAX(score) FROM customers;
+```
+```
+1300
+```
+
+> **Note:** All of these ignore `NULL` values automatically (except `COUNT(*)`, which counts every row).
+
+### Aggregate vs Non-Aggregate Functions
+
+```
+Non-aggregate: works row-by-row        Aggregate: collapses all rows into one
+┌─────────┐    ┌─────────┐             ┌─────────┐
+│ maria   │ -> │ MARIA   │             │  350    │
+│ john    │ -> │ JOHN    │             │  900    │   ->   3800
+│ sam     │ -> │ SAM     │             │  ...    │
+└─────────┘    └─────────┘             └─────────┘
+   UPPER(name) — one output per row       SUM(score) — one output total
+```
+
+```
+┌──────────┬──────────────────────────────┬───────────────────────────────────┐
+│          │  Non-aggregate (UPPER, ROUND) │  Aggregate (SUM, COUNT, AVG...)    │
+├──────────┼──────────────────────────────┼───────────────────────────────────┤
+│  Input   │  one row at a time            │  many rows                          │
+│  Output  │  one result per row           │  one result overall (or per group)  │
+└──────────┴──────────────────────────────┴───────────────────────────────────┘
+```
+
+---
+
+## GROUP BY
+
+Groups rows that share the same value, so aggregate functions run **per group** instead of over the whole table.
+
+```
+Step 1: raw rows                Step 2: grouped by country
+┌──────────────┐
+│ USA   500     │                ┌── USA group ──┐  ┌── India group ──┐
+│ USA   400     │      --->      │ 500            │  │ 750               │
+│ India 750     │                │ 400             │  │ 500               │
+│ India 500     │                └────────────────┘  └───────────────────┘
+└──────────────┘
+                                  Step 3: SUM() each group
+                                  USA   -> 900
+                                  India -> 1250
+```
+
+**Example**
+```sql
+SELECT country,
+       SUM(score) AS total_score
+FROM customers
+GROUP BY country;
+```
+
+**Output**
+
+```
+┌─────────┬──────────────┐
+│ country │ total_score  │
+├─────────┼──────────────┤
+│ USA     │ 900          │
+│ India   │ 1250         │
+└─────────┴──────────────┘
+```
+
+> **Warning:** Every column in `SELECT` must either be in `GROUP BY` or wrapped in an aggregate function. This will error in most databases:
+> ```sql
+> SELECT country, first_name, SUM(score)   -- ❌ first_name is neither grouped nor aggregated
+> FROM customers
+> GROUP BY country;
+> ```
+
+---
+
+## HAVING
+
+Filters **groups**, after `GROUP BY` has already created them.
+
+```
+groups + their totals              HAVING SUM(score) > 800
+┌─────────────────┐                ┌─────────────────┐
+│ USA   -> 900     │  ◄── keep      │ USA   -> 900     │
+│ India -> 1250    │  ◄── keep      │ India -> 1250    │
+│ UK    -> 600     │  ✗ drop
+└─────────────────┘
+```
+
+**Example**
+```sql
+SELECT country,
+       SUM(score) AS total_score
+FROM customers
+GROUP BY country
+HAVING SUM(score) > 800;
+```
+
+**Output**
+
+```
+┌─────────┬──────────────┐
+│ country │ total_score  │
+├─────────┼──────────────┤
+│ USA     │ 900          │
+│ India   │ 1250         │
+└─────────┴──────────────┘
+```
+
+---
+
+## WHERE vs HAVING
+
+```
+WHERE                              HAVING
+filters ROWS                       filters GROUPS
+runs BEFORE grouping                runs AFTER grouping
+cannot use SUM()/COUNT()/etc.       can use SUM()/COUNT()/etc.
+```
+
+```
+┌────────────────────────────┬───────────────────┬──────────────────┐
+│                            │  WHERE            │  HAVING            │
+├────────────────────────────┼───────────────────┼──────────────────┤
+│  Filters                   │  individual rows  │  groups            │
+│  Runs                      │  before GROUP BY  │  after GROUP BY    │
+│  Aggregate functions OK?   │  No                │  Yes               │
+└────────────────────────────┴───────────────────┴──────────────────┘
+```
+
+**Rule of thumb:** filtering a raw column → `WHERE`. Filtering a `SUM()`/`COUNT()`/`AVG()` result → `HAVING`.
+
+---
+
+## ORDER BY
+
+Sorts the final result.
+
+```
+ASC  (default): small ──────────► large
+DESC:           large ──────────► small
+```
+
+**Example**
+```sql
+SELECT * FROM customers ORDER BY score;        -- ascending
+SELECT * FROM customers ORDER BY score DESC;   -- descending
+```
+
+```
+ASC output          DESC output
+0                    1300
+0                    900
+350                  750
+500                  500
+750                  350
+900                  0
+1300                 0
+```
+
+> **Note:** Row order is never guaranteed unless you use `ORDER BY` — even if results "look sorted" by accident.
+
+---
+
+## Query Execution Order
+
+You **write** a query like this:
+
+```sql
+SELECT ...
+FROM ...
+WHERE ...
+GROUP BY ...
+HAVING ...
+ORDER BY ...
+```
+
+But the database **runs** it in a different order:
+
+```
+ 1. FROM        pick the table
+      │
+ 2. WHERE       filter rows
+      │
+ 3. GROUP BY    form groups
+      │
+ 4. HAVING      filter groups
+      │
+ 5. SELECT      build final columns
+      │
+ 6. ORDER BY    sort the result
+```
+
+This explains why `WHERE` can't use `SUM()`/`COUNT()` (they don't exist yet at that stage) and why `ORDER BY` can use column aliases like `total_score` (they're already calculated by then).
+
+---
+
+## Full Worked Example
+
+**Question:** Find the average score per country, only counting customers with a score that isn't 0, and only show countries averaging above 430.
+
+```sql
+SELECT country,
+       AVG(score) AS avg_score
+FROM customers
+WHERE score <> 0
+GROUP BY country
+HAVING AVG(score) > 430;
+```
+
+```
+Step 1 — WHERE score <> 0          Step 2 — GROUP BY country
+removes Ian(0) and Peter(0)
+┌────────────────┐                 ┌── Germany ──┐ ┌── USA ──┐ ┌── UK ──┐
+│ Maria  Germany 350│               │ 350          │ │ 900      │ │ 750     │
+│ John   USA     900│  --->         │ 1300         │ └──────────┘ │ 500     │
+│ Georgia UK     750│               └──────────────┘              └─────────┘
+│ Anna   UK      500│
+│ Sam   Germany 1300│
+
+Step 3 — AVG() per group            Step 4 — HAVING AVG(score) > 430
+Germany -> 825                      all three pass (825, 900, 625 are > 430)
+USA     -> 900
+UK      -> 625
+```
+
+**Final Output**
+
+```
+┌─────────┬───────────┐
+│ country │ avg_score │
+├─────────┼───────────┤
+│ Germany │ 825       │
+│ USA     │ 900       │
+│ UK      │ 625       │
+└─────────┴───────────┘
+```
+
+---
+
+## Common Beginner Mistakes
+
+1. Using `SELECT *` in real reports/apps instead of naming columns.
+2. Trying to filter an aggregate with `WHERE` instead of `HAVING`.
+3. Selecting a column that's not grouped or aggregated under `GROUP BY`.
+4. Writing `column = NULL` instead of `column IS NULL`.
+5. Using `TOP`/`LIMIT` without `ORDER BY`.
+6. Forgetting `DISTINCT` applies to the whole row, not one column, when multiple columns are selected.
+7. Assuming results come back sorted without using `ORDER BY`.
+8. Forgetting `AVG()`/`SUM()` ignore `NULL` values.
+
+---
+
+## Practice Questions
+
+Try writing the SQL yourself first, then expand the answer.
+
+**Q1. Return all unique countries.**
+<details>
+<summary>Show Answer</summary>
+
+```sql
+SELECT DISTINCT country
+FROM customers;
+```
+Result: Germany, USA, UK
+</details>
+
+**Q2. Find all customers with score ≥ 500, highest first.**
+<details>
+<summary>Show Answer</summary>
+
+```sql
+SELECT *
+FROM customers
+WHERE score >= 500
+ORDER BY score DESC;
+```
+Result: Sam (1300), John (900), Georgia (750), Anna (500)
+</details>
+
+**Q3. Count customers per country.**
+<details>
+<summary>Show Answer</summary>
+
+```sql
+SELECT country, COUNT(*) AS customer_count
+FROM customers
+GROUP BY country;
+```
+
+```
+┌─────────┬─────────────────┐
+│ country │ customer_count  │
+├─────────┼─────────────────┤
+│ Germany │ 2               │
+│ USA     │ 3               │
+│ UK      │ 2               │
+└─────────┴─────────────────┘
+```
+</details>
+
+**Q4. Total score per country, only show totals above 1000.**
+<details>
+<summary>Show Answer</summary>
+
+```sql
+SELECT country, SUM(score) AS total_score
+FROM customers
+GROUP BY country
+HAVING SUM(score) > 1000;
+```
+
+```
+┌─────────┬──────────────┐
+│ country │ total_score  │
+├─────────┼──────────────┤
+│ Germany │ 1650         │
+└─────────┴──────────────┘
+```
+</details>
+
+**Q5. Find the customer with the highest score, excluding 0.**
+<details>
+<summary>Show Answer</summary>
+
+```sql
+SELECT *
+FROM customers
+WHERE score <> 0
+ORDER BY score DESC
+LIMIT 1;
+```
+Result: Sam, Germany, 1300
+</details>
+
+**Q6. Why does this query fail, and how do you fix it?**
+```sql
+SELECT country, first_name, SUM(score)
+FROM customers
+GROUP BY country;
+```
+<details>
+<summary>Show Answer</summary>
+
+`first_name` isn't grouped or aggregated, so the database can't decide which name to show per country.
+
+Fix — remove it (or aggregate it):
+```sql
+SELECT country, SUM(score) AS total_score
+FROM customers
+GROUP BY country;
+```
+</details>
+
+---
+
+## Quick Revision Sheet
+
+```
+SELECT     = Retrieve Data
+SELECT *   = Retrieve All Columns
+DISTINCT   = Unique Values
+TOP/LIMIT  = Limit Rows Returned
+FROM       = Source Table
+WHERE      = Filter Rows (before grouping)
+COUNT()    = Number of Rows
+SUM()      = Total of a Numeric Column
+AVG()      = Average Value
+MIN()      = Smallest Value
+MAX()      = Largest Value
+GROUP BY   = Create Groups for Aggregation
+HAVING     = Filter Groups (after aggregation)
+ORDER BY   = Sort Final Results
+```
+
+```
+Execution order:  FROM -> WHERE -> GROUP BY -> HAVING -> SELECT -> ORDER BY
+```
